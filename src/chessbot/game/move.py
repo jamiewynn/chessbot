@@ -39,13 +39,11 @@ class Move:
             state.castling_rights[state.player_to_move] = set()
 
         # Check if the move is a rook move, in which case castling rights for the associated side are lost
-        queenside_rook_starting_file = 7
-        kingside_rook_starting_file = 0
         back_rank = 0 if state.player_to_move == Colour.WHITE else 7
         if piece.type == PieceType.ROOK:
-            if self.original_square == RankAndFile(rank=back_rank, file=queenside_rook_starting_file):
+            if self.original_square == RankAndFile(rank=back_rank, file=QUEENSIDE_ROOK_STARTING_FILE):
                 state.castling_rights[state.player_to_move].discard(CastleType.QUEENSIDE)
-            elif self.original_square == RankAndFile(rank=back_rank, file=kingside_rook_starting_file):
+            elif self.original_square == RankAndFile(rank=back_rank, file=KINGSIDE_ROOK_STARTING_FILE):
                 state.castling_rights[state.player_to_move].discard(CastleType.KINGSIDE)
 
         state.player_to_move = state.player_to_move.other()
