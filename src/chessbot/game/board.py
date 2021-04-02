@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import string
 from dataclasses import dataclass
-from enum import IntEnum, auto, Enum
-from typing import List, Optional, Dict, Iterable, Union, Tuple
+from enum import IntEnum, Enum
+from typing import List, Optional, Iterable, Tuple
 
 import numpy as np
 
@@ -128,19 +128,13 @@ class Board:
 
     def __str__(self):
         board_str = ''
-        #board_str += '   - - - - - - - -\n'
         for rank in reversed(range(NUM_RANKS)):
-            #board_str += f'{rank+1}| '
             board_str += f'{rank+1} '
             for file in range(NUM_FILES):
                 square = RankAndFile(rank=rank, file=file)
                 piece = self[square]
                 board_str += make_coloured_char(piece, square)
-                #board_str += ' '
-            #board_str += '|\n'
             board_str += '\n'
-        #board_str += '   - - - - - - - -\n'
-        #board_str += '   A B C D E F G H'
         board_str += '  ＡＢＣＤＥＦＧＨ'
 
         return board_str
