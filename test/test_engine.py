@@ -1,9 +1,9 @@
 from unittest import TestCase
 
 from chessbot.engine.ai_player import AIPlayer, EngineParams
-from chessbot.game.board import RankAndFile
 from chessbot.game.game_state import GameState
 from chessbot.game.move import Move
+from chessbot.game.piece import RankAndFile
 
 
 class EngineTest(TestCase):

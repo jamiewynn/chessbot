@@ -16,3 +16,4 @@ Then execute the package to play against the AI using
 - Experiment with using an NN heuristic evaluation function
 - Try out tree search performance optimisations such as transposition tables and killer heuristic
 - Try doing parameter optimisation via self-play
+- See whether something like Numba could speed things up via JIT compilation

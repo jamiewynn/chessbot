@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, Optional, Set
 
-from chessbot.game.board import Board, Colour, RankAndFile
+from chessbot.game.board import Board
+from chessbot.game.piece import Colour, RankAndFile
 
 
 class CastleType(Enum):

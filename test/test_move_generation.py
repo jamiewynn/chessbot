@@ -2,10 +2,11 @@
 """ Tests to verify that the rules of chess have been correctly implemented in the move generation code """
 import unittest
 
-from chessbot.game.board import Board, Colour, Piece, PieceType, RankAndFile
+from chessbot.game.board import Board
 from chessbot.game.game_state import GameState
 from chessbot.game.move import Move, Promotion
-from chessbot.game.move_generation import BoardCalculationCache, GameResult
+from chessbot.game.move_generation import GameResult, PositionAnalyser
+from chessbot.game.piece import Colour, Piece, PieceType, RankAndFile
 
 
 class MoveGenerationTests(unittest.TestCase):
@@ -25,7 +26,7 @@ class MoveGenerationTests(unittest.TestCase):
         board[RankAndFile.from_algebraic('e4')] = Piece(type=PieceType.QUEEN, colour=Colour.BLACK)
         state = self.make_game_state(board=board, player_to_move=Colour.BLACK)
         # Act
-        valid_moves = BoardCalculationCache(state).get_valid_moves()
+        valid_moves = PositionAnalyser(state).get_valid_moves()
 
         # Assert
         # Only valid queen moves are those where the queen moves up or down the file
@@ -45,8 +46,8 @@ class MoveGenerationTests(unittest.TestCase):
         state = self.make_game_state(board=board, player_to_move=Colour.BLACK)
 
         # Act
-        calculation_cache = BoardCalculationCache(state)
-        valid_moves = calculation_cache.get_valid_moves()
+        position_analyser = PositionAnalyser(state)
+        valid_moves = position_analyser.get_valid_moves()
 
         # Assert
         # Pawn can promote either by moving forward once or by capturing the bishop
@@ -71,7 +72,7 @@ class MoveGenerationTests(unittest.TestCase):
         state = double_pawn_move.execute(state)
 
         # Assert
-        valid_moves = BoardCalculationCache(state).get_valid_moves()
+        valid_moves = PositionAnalyser(state).get_valid_moves()
         # White pawn should be able to either capture the black pawn en passant or just push normally
         valid_moves_expected = {
             Move(original_square=RankAndFile.from_algebraic('d5'), target_square=RankAndFile.from_algebraic('e6')),
@@ -89,10 +90,10 @@ class MoveGenerationTests(unittest.TestCase):
         state = self.make_game_state(board=board, player_to_move=Colour.BLACK)
 
         # Act
-        move_generation_cache = BoardCalculationCache(state)
+        position_analyser = PositionAnalyser(state)
 
         # Assert
-        assert move_generation_cache.is_check()
-        assert move_generation_cache.is_checkmate()
-        assert len(move_generation_cache.get_valid_moves()) == 0
-        assert move_generation_cache.get_game_result() == GameResult.WHITE_WIN
+        assert position_analyser.is_check()
+        assert position_analyser.is_checkmate()
+        assert len(position_analyser.get_valid_moves()) == 0
+        assert position_analyser.get_game_result() == GameResult.WHITE_WIN

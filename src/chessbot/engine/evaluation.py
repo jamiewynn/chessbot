@@ -3,9 +3,10 @@ from collections import Counter
 
 import numpy as np
 
-from chessbot.game.board import NUM_RANKS, Colour, PieceType
+from chessbot.game.board import NUM_RANKS
 from chessbot.game.game_state import GameState
-from chessbot.game.move_generation import BoardCalculationCache
+from chessbot.game.move_generation import PositionAnalyser
+from chessbot.game.piece import Colour, PieceType
 
 _logger = logging.getLogger(__name__)
 _logger.setLevel(logging.INFO)
@@ -24,10 +25,15 @@ EXTRA_PAWN_VALUE_PER_STEP_FORWARD = 0.1
 
 class HeuristicEvaluator:
     def evaluate(self, position: GameState) -> float:
-        move_generation_cache = BoardCalculationCache(position)
+        """
+        :param position: Position to evaluate
+        :return: Approximate value of the position, in units where a pawn is roughly worth 1, and the +ve sign indicates
+        an advantage to white. Checkmates will be evaluated as +/- infinity.
+        """
+        position_analyser = PositionAnalyser(position)
 
         # If the game is over, this makes the evaluation trivial
-        result = move_generation_cache.get_game_result()
+        result = position_analyser.get_game_result()
         _logger.debug(f'Result {result}')
         if result is not None:
             if result == result.WHITE_WIN:
@@ -42,8 +48,8 @@ class HeuristicEvaluator:
         score = 0.
 
         score += self._material_score(position)
-        score += self._attacked_squares_score(move_generation_cache)
-        score += self._hanging_pieces_score(position, move_generation_cache)
+        score += self._attacked_squares_score(position_analyser)
+        score += self._hanging_pieces_score(position, position_analyser)
         score += self._pawn_structure_score(position)
 
         _logger.debug(f'Heuristic evaluation for position\n{position.board}\n')
@@ -63,12 +69,12 @@ class HeuristicEvaluator:
         return score
 
     @staticmethod
-    def _attacked_squares_score(move_generation_cache: BoardCalculationCache) -> float:
+    def _attacked_squares_score(position_analyser: PositionAnalyser) -> float:
         score = 0.
 
         # Attacking more squares is better, and central squares in particular are better targets
         for player in Colour:
-            attacks = move_generation_cache.get_attacks(attacking_side=player)
+            attacks = position_analyser.get_attacks(attacking_side=player)
             for attack in attacks:
                 # rank=3.5, file=3.5 corresponds to the centre of the board
                 taxicab_distance_from_centre = abs(attack.rank - 3.5) + abs(attack.file - 3.5)
@@ -89,10 +95,11 @@ class HeuristicEvaluator:
         return score
 
     @staticmethod
-    def _hanging_pieces_score(position: GameState, move_generation_cache: BoardCalculationCache) -> float:
+    def _hanging_pieces_score(position: GameState, position_analyser: PositionAnalyser) -> float:
         # Pieces attacked more times than they are defended are considered lost for the purposes of heuristic evaluation
-        attacks_by_white = move_generation_cache.get_attacks(attacking_side=Colour.WHITE)
-        attacks_by_black = move_generation_cache.get_attacks(attacking_side=Colour.BLACK)
+        # if the opposing side is about to move.
+        attacks_by_white = position_analyser.get_attacks(attacking_side=Colour.WHITE)
+        attacks_by_black = position_analyser.get_attacks(attacking_side=Colour.BLACK)
         attack_counters = {
             Colour.WHITE: Counter(attacks_by_white),
             Colour.BLACK: Counter(attacks_by_black),
@@ -105,9 +112,9 @@ class HeuristicEvaluator:
             defence_count = attack_counters[piece.colour][square]
             attack_count = attack_counters[piece.colour.other()][square]
             if attack_count > defence_count:
-                if piece.colour == Colour.WHITE:
+                if piece.colour == Colour.WHITE and position.player_to_move == Colour.BLACK:
                     score -= PIECE_VALUES[piece.type]
-                if piece.colour == Colour.BLACK:
+                if piece.colour == Colour.BLACK and position.player_to_move == Colour.WHITE:
                     score += PIECE_VALUES[piece.type]
 
         return score

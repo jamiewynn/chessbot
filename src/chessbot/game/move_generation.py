@@ -2,36 +2,38 @@ import logging
 from abc import ABC, abstractmethod
 from enum import Enum
 from functools import cached_property, lru_cache
-from typing import Any, Iterable, Iterator, List, Optional, Set
+from typing import Iterable, List, Optional, Set
 
-from chessbot.game.board import (NUM_RANKS, Board, Colour, Piece,
-                                 PieceOnSquare, PieceType, RankAndFile)
+from chessbot.game.board import NUM_RANKS, Board
 from chessbot.game.game_state import CastleType, GameState
+from chessbot.game.helpers import (_iterator_non_empty,
+                                   _square_is_occupied_by_player,
+                                   _walk_along_direction, _squares_same_diagonal, _squares_same_rank_or_file,
+                                   _squares_are_knights_move_away)
 from chessbot.game.move import Castle, Move, Promotion
+from chessbot.game.piece import Colour, Piece, PieceType, RankAndFile
 
 _logger = logging.getLogger(__name__)
 _logger.setLevel(logging.DEBUG)
 
 
-# TODO To avoid recalculating stuff like attacked squares!
-# Will expose various member functions like is_check, is_checkmate, get_attacked_squares, etc etc
-# Then higher-level functions like generate_moves can go elsewhere and this file can contain lower-level calculational
-# stuff
-CACHE_SIZES = 64
-
-
 class GameResult(Enum):
     BLACK_WIN = 'BLACK_WINS'
-    WHITE_WIN = 'WHITE_WIN'
+    WHITE_WIN = 'WHITE_WINS'
     DRAW = 'DRAW'  # Including both stalemate and draw by agreement
 
 
-class BoardCalculationCache:
+class PositionAnalyser:
+    """
+    Computes properties of interest for a given state, and caches them since often these properties are needed multiple
+    times. NB this isn't for evaluating how good a position is via heuristics - all that is in the 'engine' submodule.
+    """
+
     def __init__(self, state: GameState):
         self._state = state
 
     @property
-    def state(self):
+    def state(self) -> GameState:
         return self._state
 
     @lru_cache
@@ -91,24 +93,45 @@ class BoardCalculationCache:
             for move in candidate_moves:
                 child_state = move.execute(self._state)
                 child_state.player_to_move = self._state.player_to_move
-                if not BoardCalculationCache(child_state).is_check():
+                if not PositionAnalyser(child_state).is_check():
                     moves.append(move)
         return moves
 
 
 class MoveGenerator(ABC):
+    """
+    Interface for a class that can calculate moves and attacks by a given piece.
+    In practice this class is implemented for the different possible movement patterns, and the implementations are
+    stored in the lookup PIECE_TYPE_TO_MOVE_GENERATOR.
+    """
+
     @abstractmethod
-    def get_moves(self, original_square: RankAndFile, calculation_cache: BoardCalculationCache) -> Iterable[Move]:
+    def get_moves(self, original_square: RankAndFile, position_analyser: PositionAnalyser) -> Iterable[Move]:
+        """
+        Get all valid moves for a particular piece.
+        :param original_square: Square that the piece is currently on.
+        :param position_analyser: Calculation cache for the game state of interest.
+        :return: Valid moves for this piece. NB this doesn't have to filter out moves that would be illegal due to
+        leaving the player in check - those are filtered out at a higher level when
+        BoardCalculationCache.get_valid_moves is called.
+        """
         raise NotImplementedError
 
     @abstractmethod
     def get_attacks(self, square: RankAndFile, board: Board) -> Iterable[RankAndFile]:
+        """
+        Get all attacks by a given piece.
+        :param square: Square that the piece is currently on.
+        :param board: Board that the piece is on.
+        :return: Squares attacked by the specified piece. Note that this is defined to include squares occupied by
+        pieces of the same colour (i.e. pieces that this piece is 'defending').
+        """
         raise NotImplementedError
 
 
 class PawnMoveGenerator(MoveGenerator):
-    def get_moves(self, original_square: RankAndFile, calculation_cache: BoardCalculationCache) -> Iterable[Move]:
-        state = calculation_cache.state
+    def get_moves(self, original_square: RankAndFile, position_analyser: PositionAnalyser) -> Iterable[Move]:
+        state = position_analyser.state
         colour = state.board[original_square].colour
         colour_adjusted_rank = original_square.rank if colour == Colour.WHITE else NUM_RANKS-1 - original_square.rank
 
@@ -175,8 +198,8 @@ class KnightMoveGenerator(MoveGenerator):
             RankAndFile(2, 1), RankAndFile(2, -1), RankAndFile(-2, 1), RankAndFile(-2, -1)
         ]
 
-    def get_moves(self, original_square: RankAndFile, calculation_cache: BoardCalculationCache) -> Iterable[Move]:
-        state = calculation_cache.state
+    def get_moves(self, original_square: RankAndFile, position_analyser: PositionAnalyser) -> Iterable[Move]:
+        state = position_analyser.state
         for attacked_square in self.get_attacks(original_square, state.board):
             if not _square_is_occupied_by_player(attacked_square, state.player_to_move, state):
                 yield Move(original_square=original_square, target_square=attacked_square)
@@ -195,9 +218,9 @@ class KingMoveGenerator(MoveGenerator):
             RankAndFile(1, 1), RankAndFile(-1, -1), RankAndFile(1, -1), RankAndFile(-1, 1)
         ]
 
-    def get_moves(self, original_square: RankAndFile, calculation_cache: BoardCalculationCache) -> Iterable[Move]:
-        state = calculation_cache.state
-        squares_attacked_by_opposing_side = calculation_cache.get_attacks(state.player_to_move.other())
+    def get_moves(self, original_square: RankAndFile, position_analyser: PositionAnalyser) -> Iterable[Move]:
+        state = position_analyser.state
+        squares_attacked_by_opposing_side = position_analyser.get_attacks(state.player_to_move.other())
 
         # Normal moves
         for attack in self.get_attacks(original_square, state.board):
@@ -243,6 +266,7 @@ class KingMoveGenerator(MoveGenerator):
 
 
 class StraightLineMoveGenerator(MoveGenerator):
+    """ MoveGenerator that is sufficiently generic to work for the queen, bishop, or rook. """
     def __init__(self, moves_diagonally: bool, moves_up_and_right: bool):
         self._move_directions: List[RankAndFile] = []
         if moves_diagonally:
@@ -250,8 +274,8 @@ class StraightLineMoveGenerator(MoveGenerator):
         if moves_up_and_right:
             self._move_directions += [RankAndFile(1, 0), RankAndFile(0, 1), RankAndFile(-1, 0), RankAndFile(0, -1)]
 
-    def get_moves(self, original_square: RankAndFile, calculation_cache: BoardCalculationCache) -> Iterable[Move]:
-        state = calculation_cache.state
+    def get_moves(self, original_square: RankAndFile, position_analyser: PositionAnalyser) -> Iterable[Move]:
+        state = position_analyser.state
         for move_direction in self._move_directions:
             attacks = list(self._get_attacks_in_direction(original_square, state.board, move_direction))
 
@@ -298,66 +322,14 @@ PIECE_TYPE_TO_MOVE_GENERATOR = {
 }
 
 
-def _square_is_occupied_by_player(square: RankAndFile, player: Colour, state: GameState) -> bool:
-    target_square_contents = state.board[square]
-    return target_square_contents is not None and target_square_contents.colour == player
-
-
-def _is_valid_target_square(target_square: RankAndFile, player: Colour, state: GameState) -> bool:
-    # Check if a square can in principle be moved to by the specified player, i.e. is on the board and is not occupied
-    # by one of that player's own pieces.
-    return target_square.is_in_board() and not _square_is_occupied_by_player(target_square, player, state)
-
-
-def _walk_along_direction(start_square: RankAndFile, direction: RankAndFile) -> Iterable[RankAndFile]:
-    """
-    Walk along the board until the end is reached.
-    :param start_square: Square to start walking from (will be included in output)
-    :param direction: Direction to walk in - steps of this size will be taken
-    :return: Iterable of squares reached before going off the end of the board
-    """
-    target_square = start_square
-    while target_square.is_in_board():
-        yield target_square
-        target_square = target_square + direction
-
-
-def _find_pieces_pinned_to_king(king_square: RankAndFile, state: GameState) -> Iterable[PieceOnSquare]:
-    # NB Only rooks, queens and bishops can pin!
-    move_directions = PIECE_TYPE_TO_MOVE_GENERATOR[PieceType.QUEEN].move_directions
-    king_colour = state.board[king_square].colour
-
-    def iter_until_hitting_piece(squares: Iterable[RankAndFile]) -> Optional[PieceOnSquare]:
-        for square in squares:
-            square_contents = state.board[square]
-            if square_contents is not None:
-                return PieceOnSquare(piece=square_contents, square=square)
-
-    # Condition for a pin is that walking from the king in one of 8 possible directions intersects with a piece of the
-    # same colour before intersecting a piece of the opposite colour that can attack along that direction.
-    for direction in move_directions:
-        squares_along_direction = iter(_walk_along_direction(king_square, direction))
-
-        # Pinned piece must of same colour as king
-        first_piece_hit = iter_until_hitting_piece(squares_along_direction)
-        if first_piece_hit is None or first_piece_hit.piece.colour != king_colour:
-            continue
-
-        # Pinning piece must of opposite colour as king
-        second_piece_hit = iter_until_hitting_piece(squares_along_direction)
-        if second_piece_hit is None or second_piece_hit.piece.colour == king_colour:
-            continue
-
-        # Pinning piece must be capable of attacking along this direction
-        # (minus sign because we walked from the king from the attacking piece)
-        if -direction not in PIECE_TYPE_TO_MOVE_GENERATOR[second_piece_hit.piece.type].move_directions:
-            continue
-
-        # If we get this far then we have a pin, so return the pinned piece (the first one we hit)
-        yield first_piece_hit
-
-
 def _get_squares_attacked_by_side(board: Board, colour: Colour) -> Iterable[RankAndFile]:
+    """
+    Get all attacks by a specified side.
+    :param board: Board to get attacks for
+    :param colour: Side to get attacks by
+    :return: Iterable of squares that the specified side is attacking. Squares will be returned once per attack, so the
+    same square may appear multiple times.
+    """
     for square in board.get_occupied_squares():
         piece = board[square]
         if piece.colour != colour:
@@ -369,7 +341,14 @@ def _get_squares_attacked_by_side(board: Board, colour: Colour) -> Iterable[Rank
 
 
 def _get_attacks_on_square(board: Board, target_square: RankAndFile, attacking_colour: Colour) -> Iterable[RankAndFile]:
-    # NOTE: a lot of time is spent in this function!
+    """
+    Get all attacks on a particular square.
+    :param board: Board to get attacks for
+    :param target_square: Square to get attacks on
+    :param attacking_colour: Colour to get attacks by
+    :return: Iterable of squares on which there are pieces attacking the specified square.
+    """
+    # NB a lot of time is spent in this function!
     for square in board.get_occupied_squares():
         piece = board[square]
         if piece.colour != attacking_colour:
@@ -400,26 +379,3 @@ def _get_attacks_on_square(board: Board, target_square: RankAndFile, attacking_c
         attacks = PIECE_TYPE_TO_MOVE_GENERATOR[piece.type].get_attacks(square, board)
         if target_square in attacks:
             yield square
-
-
-def _taxicab_distance(lhs: RankAndFile, rhs: RankAndFile) -> int:
-    return abs(lhs.rank - rhs.rank) + abs(lhs.file - rhs.file)
-
-
-def _squares_are_knights_move_away(lhs: RankAndFile, rhs: RankAndFile) -> bool:
-    return {abs(lhs.rank - rhs.rank), abs(lhs.file - rhs.file)} == {1, 2}
-
-
-def _squares_same_rank_or_file(lhs: RankAndFile, rhs: RankAndFile) -> bool:
-    return lhs.rank == rhs.rank or lhs.file == rhs.file
-
-
-def _squares_same_diagonal(lhs: RankAndFile, rhs: RankAndFile) -> bool:
-    # Checks whether one can get from lhs to rhs by travelling diagonally
-    delta = rhs - lhs
-    return abs(delta.rank) == abs(delta.file)
-
-
-def _iterator_non_empty(x: Iterator[Any]) -> bool:
-    # Helper fn to lazily check whether an iterator has any elements
-    return any(True for _ in x)
