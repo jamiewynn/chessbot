@@ -23,7 +23,6 @@ class Move:
 
         # Check if the move is a pawn double move, in which case en passant is legal next turn
         if abs(self.target_square.rank - self.original_square.rank) == 2 and piece.type == PieceType.PAWN:
-            #en_passant_square_rank = (self.original_square.rank + self.target_square.rank) // 2
             state.double_moved_pawn_square = self.target_square
         else:
             state.double_moved_pawn_square = None

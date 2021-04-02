@@ -61,7 +61,10 @@ class AIPlayer(Player):
         alpha_beta_arg_tuples = [
             (move.execute(state), depth-1, self._evaluator, -np.inf, np.inf) for move in valid_moves
         ]
-        move_values = list(self._pool.imap(alpha_beta_multiprocessing_kernel, alpha_beta_arg_tuples, chunksize=1))
+        if self._params.num_threads > 1:
+            move_values = list(self._pool.imap(alpha_beta_multiprocessing_kernel, alpha_beta_arg_tuples, chunksize=1))
+        else:
+            move_values = list(map(alpha_beta_multiprocessing_kernel, alpha_beta_arg_tuples))
 
         if state.player_to_move == Colour.WHITE:
             best_move_idx = np.argmax(move_values)
