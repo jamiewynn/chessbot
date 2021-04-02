@@ -16,7 +16,7 @@ class GameResult(Enum):
 class PositionAnalyserInterface(ABC):
     """
     NB this separate interface class exists solely to break an otherwise circular import between the move generator
-    classes and the PositionAnalyserInterface.
+    classes and the PositionAnalyser.
     """
     @property
     @abstractmethod

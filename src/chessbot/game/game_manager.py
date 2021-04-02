@@ -17,10 +17,10 @@ class GameManager:
         while True:
             position_analyser = PositionAnalyser(self._state)
             result = position_analyser.get_game_result()
+            print(self._state.board)
             if result is not None:
                 print('Game ended with result', result)
                 return
-            print(self._state.board)
             player_to_move = self._players[self._state.player_to_move]
             move = self._get_valid_move(player_to_move)
             print('Received move:', move)

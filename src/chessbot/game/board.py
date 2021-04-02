@@ -37,11 +37,17 @@ class Board:
 
     @classmethod
     def make_empty(cls):
+        """
+        :return: A completely empty board
+        """
         board = np.zeros((NUM_RANKS, NUM_FILES), dtype=np.int8)
         return cls(board)
 
     @classmethod
     def standard_starting_position(cls):
+        """
+        :return: A board set up in the starting position for a standard game of chess
+        """
         board = np.zeros((NUM_RANKS, NUM_FILES), dtype=np.int8)
         piece_row_initial = [
             PieceType.ROOK, PieceType.KNIGHT, PieceType.BISHOP, PieceType.QUEEN,
@@ -57,10 +63,18 @@ class Board:
         return cls(board)
 
     def __getitem__(self, square: RankAndFile) -> Optional[Piece]:
+        """
+        :param square: Square to get the contents of
+        :return: A Piece if the square is occupied; None otherwise.
+        """
         assert square.is_in_board()
         return self._int_to_piece(self._board[square.as_tuple()])
 
     def __setitem__(self, square: RankAndFile, piece: Optional[Piece]) -> None:
+        """
+        :param square: Square to set the contents of
+        :param piece: Either a piece to place at the specified location or None to make the square empty.
+        """
         self._board[square.as_tuple()] = self._piece_to_int(piece)
 
     def __str__(self):
@@ -81,13 +95,14 @@ class Board:
         for square in zip(*occupied_squares):
             yield RankAndFile.from_tuple(square)
 
-    def locate_piece(self, piece: Piece) -> List[RankAndFile]:
+    def locate_piece(self, piece: Piece) -> Iterable[RankAndFile]:
         piece_locations = np.where(self._board == self._piece_to_int(piece))
         for square in zip(*piece_locations):
             yield RankAndFile.from_tuple(square)
 
     @staticmethod
     def _piece_to_int(piece: Optional[Piece]) -> int:
+        # Conversion function to the internal numpy int8 representation
         if piece is None:
             return 0
         piece_idx = piece.type.value
@@ -95,6 +110,7 @@ class Board:
 
     @staticmethod
     def _int_to_piece(piece_int: int) -> Optional[Piece]:
+        # Conversion function from the internal numpy int8 representation
         if piece_int == 0:
             return None
         piece_type = PieceType(abs(piece_int))

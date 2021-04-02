@@ -70,6 +70,9 @@ class PieceOnSquare:
 
 @dataclass
 class RankAndFile:
+    """
+    Represents a chessboard position. The convention adopted here is that the bottom-left corner is rank=0, file=0.
+    """
     rank: int
     file: int
 
@@ -81,6 +84,11 @@ class RankAndFile:
 
     @classmethod
     def from_algebraic(cls, algebraic_pos: str):
+        """
+        Construct from standard algebraic notation for board positions.
+        :param algebraic_pos: Algebraic position, e.g. 'e6', 'h8', etc.
+        :return: Corresponding RankAndFile.
+        """
         file, rank = algebraic_pos
         return cls(file=string.ascii_lowercase.index(file), rank=int(rank)-1)
 

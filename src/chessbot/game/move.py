@@ -12,10 +12,19 @@ KINGSIDE_ROOK_STARTING_FILE = 7
 
 @dataclass
 class Move:
+    """
+    Represents a single move. Instances of this base class corresponding to ordinary moves or captures; there are
+    special subclasses below for castling and promotion.
+    """
     original_square: RankAndFile
     target_square: RankAndFile
 
     def execute(self, state: GameState) -> GameState:
+        """
+        Execute this move. The validity of the move is not verified here except for some simple checks.
+        :param state: State to execute the move from.
+        :return: New state resulting by making this move.
+        """
         state = copy.deepcopy(state)
         piece = state.board[self.original_square]
         assert piece is not None
