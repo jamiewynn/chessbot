@@ -4,7 +4,7 @@ from typing import List
 
 from chessbot.game.game_state import CastleType, GameState
 from chessbot.game.move import Castle, Move, Promotion
-from chessbot.game.move_generation import PositionAnalyser
+from chessbot.game.position_analyser import PositionAnalyser
 from chessbot.game.piece import Colour, PieceType, RankAndFile
 
 

@@ -1,6 +1,6 @@
 from chessbot.game.game_state import GameState
 from chessbot.game.move import Move
-from chessbot.game.move_generation import PositionAnalyser
+from chessbot.game.position_analyser import PositionAnalyser
 from chessbot.game.piece import Colour
 from chessbot.game.player import Player
 

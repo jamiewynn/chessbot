@@ -22,6 +22,12 @@ class Move:
         target_square_contents = state.board[self.target_square]
         assert target_square_contents is None or target_square_contents.colour == state.player_to_move.other()
 
+        # Delete the double moved pawn if the move is an en passant capture
+        if self._is_en_passant(state):
+            assert state.board[self.target_square] is None
+            assert state.double_moved_pawn_square is not None
+            state.board[state.double_moved_pawn_square] = None
+
         # Check if the move is a pawn double move, in which case en passant is legal next turn
         if abs(self.target_square.rank - self.original_square.rank) == 2 and piece.type == PieceType.PAWN:
             state.double_moved_pawn_square = self.target_square
@@ -46,6 +52,24 @@ class Move:
         state.board[self.original_square] = None
         state.board[self.target_square] = piece
         return state
+
+    def _is_en_passant(self, state: GameState) -> bool:
+        # Check if the move is an en passant capture, in which case we have to delete the pawn from the square it ended
+        # up on.
+        target_square_contents = state.board[self.target_square]
+        piece = state.board[self.original_square]
+
+        # Can tell if move is en passant by verifying that:
+        # 1) The move is a pawn move
+        if piece.type != PieceType.PAWN:
+            return False
+        # 2) The move is diagonal
+        if self.target_square.file == self.original_square.file:
+            return False
+        # 3) The target square is empty
+        if target_square_contents is not None:
+            return False
+        return True
 
     def __hash__(self):
         return hash((self.original_square, self.target_square))

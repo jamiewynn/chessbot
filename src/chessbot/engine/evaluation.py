@@ -5,7 +5,7 @@ import numpy as np
 
 from chessbot.game.board import NUM_RANKS
 from chessbot.game.game_state import GameState
-from chessbot.game.move_generation import PositionAnalyser
+from chessbot.game.position_analyser import PositionAnalyser
 from chessbot.game.piece import Colour, PieceType
 
 _logger = logging.getLogger(__name__)

@@ -5,7 +5,8 @@ import unittest
 from chessbot.game.board import Board
 from chessbot.game.game_state import GameState
 from chessbot.game.move import Move, Promotion
-from chessbot.game.move_generation import GameResult, PositionAnalyser
+from chessbot.game.position_analyser import PositionAnalyser
+from chessbot.game.move_generation.position_analyser_interface import GameResult
 from chessbot.game.piece import Colour, Piece, PieceType, RankAndFile
 
 
@@ -74,12 +75,20 @@ class MoveGenerationTests(unittest.TestCase):
         # Assert
         valid_moves = PositionAnalyser(state).get_valid_moves()
         # White pawn should be able to either capture the black pawn en passant or just push normally
+        en_passant_capture_move = Move(original_square=RankAndFile.from_algebraic('d5'),
+                                       target_square=RankAndFile.from_algebraic('e6'))
         valid_moves_expected = {
-            Move(original_square=RankAndFile.from_algebraic('d5'), target_square=RankAndFile.from_algebraic('e6')),
+            en_passant_capture_move,
             Move(original_square=RankAndFile.from_algebraic('d5'), target_square=RankAndFile.from_algebraic('d6')),
         }
         assert state.double_moved_pawn_square == RankAndFile.from_algebraic('e5')
         self.assertSetEqual(set(valid_moves), valid_moves_expected)
+
+        # Verify that EP capture is handled correctly, i.e. the pawn is deleted and the attacking pawn moves to the
+        # right square
+        state = en_passant_capture_move.execute(state)
+        assert state.board[RankAndFile.from_algebraic('e6')] == Piece(type=PieceType.PAWN, colour=Colour.WHITE)
+        assert state.board[RankAndFile.from_algebraic('e5')] is None
 
     def test_can_identify_checkmate(self):
         # Arrange
