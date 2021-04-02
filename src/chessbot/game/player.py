@@ -3,8 +3,8 @@ from abc import ABC, abstractmethod
 from typing import List
 
 from chessbot.game.board import Colour, PieceType, RankAndFile
-from chessbot.game.game_state import GameState, CastleType
-from chessbot.game.move import Move, Castle, Promotion
+from chessbot.game.game_state import CastleType, GameState
+from chessbot.game.move import Castle, Move, Promotion
 from chessbot.game.move_generation import BoardCalculationCache
 
 

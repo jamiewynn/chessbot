@@ -1,10 +1,12 @@
+import logging
 from collections import Counter
 
-from chessbot.game.board import PieceType, Colour, NUM_RANKS
-from chessbot.game.game_state import GameState
 import numpy as np
+
+from chessbot.game.board import NUM_RANKS, Colour, PieceType
+from chessbot.game.game_state import GameState
 from chessbot.game.move_generation import BoardCalculationCache
-import logging
+
 _logger = logging.getLogger(__name__)
 _logger.setLevel(logging.INFO)
 

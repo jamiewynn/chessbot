@@ -1,7 +1,8 @@
 
 """ Tests to verify that the rules of chess have been correctly implemented in the move generation code """
 import unittest
-from chessbot.game.board import Board, RankAndFile, PieceType, Piece, Colour
+
+from chessbot.game.board import Board, Colour, Piece, PieceType, RankAndFile
 from chessbot.game.game_state import GameState
 from chessbot.game.move import Move, Promotion
 from chessbot.game.move_generation import BoardCalculationCache, GameResult

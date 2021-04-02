@@ -1,9 +1,10 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, Dict, Set
+from typing import Dict, Optional, Set
 
-from chessbot.game.board import Board, RankAndFile, Colour
+from chessbot.game.board import Board, Colour, RankAndFile
 
 
 class CastleType(Enum):

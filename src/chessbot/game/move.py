@@ -1,9 +1,10 @@
 from __future__ import annotations
+
 import copy
 from dataclasses import dataclass
 
-from chessbot.game.board import PieceType, RankAndFile, Piece, Colour
-from chessbot.game.game_state import GameState, CastleType
+from chessbot.game.board import Colour, Piece, PieceType, RankAndFile
+from chessbot.game.game_state import CastleType, GameState
 
 QUEENSIDE_ROOK_STARTING_FILE = 0
 KINGSIDE_ROOK_STARTING_FILE = 7

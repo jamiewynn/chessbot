@@ -1,13 +1,13 @@
+import logging
+from abc import ABC, abstractmethod
 from enum import Enum
 from functools import cached_property, lru_cache
-from typing import Iterable, List, Optional, Set, Iterator, Any
-from abc import ABC, abstractmethod
+from typing import Any, Iterable, Iterator, List, Optional, Set
 
-from chessbot.game.board import RankAndFile, Colour, PieceType, Piece, PieceOnSquare, NUM_RANKS, Board
-from chessbot.game.game_state import GameState, CastleType
-from chessbot.game.move import Move, Promotion, Castle
-
-import logging
+from chessbot.game.board import (NUM_RANKS, Board, Colour, Piece,
+                                 PieceOnSquare, PieceType, RankAndFile)
+from chessbot.game.game_state import CastleType, GameState
+from chessbot.game.move import Castle, Move, Promotion
 
 _logger = logging.getLogger(__name__)
 _logger.setLevel(logging.DEBUG)

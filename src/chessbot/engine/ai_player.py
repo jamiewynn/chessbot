@@ -1,17 +1,17 @@
+import logging
 import multiprocessing
 import random
+import time
 from dataclasses import dataclass
 
-import time
-
 import numpy as np
+
 from chessbot.engine.evaluation import HeuristicEvaluator
 from chessbot.game.board import Colour
 from chessbot.game.game_state import GameState
 from chessbot.game.move import Move
 from chessbot.game.move_generation import BoardCalculationCache
 from chessbot.game.player import Player
-import logging
 
 _logger = logging.getLogger(__name__)
 _logger.setLevel(logging.INFO)

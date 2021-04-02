@@ -1,9 +1,11 @@
+import logging
+
 from chessbot.engine.ai_player import AIPlayer, EngineParams
 from chessbot.game.board import Colour
 from chessbot.game.game_manager import GameManager
 from chessbot.game.game_state import GameState
 from chessbot.game.player import HumanPlayer
-import logging
+
 logging.basicConfig(level=logging.INFO)
 
 if __name__ == '__main__':

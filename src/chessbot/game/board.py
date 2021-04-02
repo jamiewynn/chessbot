@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import string
 from dataclasses import dataclass
-from enum import IntEnum, Enum
-from typing import List, Optional, Iterable, Tuple
+from enum import Enum, IntEnum
+from typing import Iterable, List, Optional, Tuple
 
 import numpy as np
 

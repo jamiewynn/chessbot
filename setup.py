@@ -1,4 +1,5 @@
 import os
+
 import setuptools
 
 repository_dir = os.path.dirname(__file__)
